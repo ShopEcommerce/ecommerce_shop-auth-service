@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { app } from './app';
 import { rabbitmqWrapper } from '@teleshop/common';
+import { startOutboxWorker } from './workers/outbox.worker';
 import pino from 'pino';
 
 const logger = pino();
@@ -18,6 +19,8 @@ const start = async () => {
 
   try {
     await rabbitmqWrapper.connect(process.env.RABBITMQ_URL);
+
+    startOutboxWorker();
 
     // Graceful Shutdown 
     process.on('SIGINT', () => rabbitmqWrapper.close());

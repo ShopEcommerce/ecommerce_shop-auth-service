@@ -1,5 +1,6 @@
 import { prisma } from "../../db/prisma";
 import { Prisma } from "@prisma/client";
+import { Subjects } from '@teleshop/common';
 
 export class AuthRepository {
   static async findByEmail(email: string) {
@@ -50,5 +51,56 @@ export class AuthRepository {
 
   static async deleteAllRefreshTokens(userId: string) {
     return prisma.refreshToken.deleteMany({ where: { userId } });
+  }
+
+  static async createUserWithOutbox(data: Prisma.UserCreateInput, correlationId?: string) {
+    return prisma.$transaction(async (tx) => {
+
+      const user = await tx.user.create({ data });
+
+      const eventPayload = {
+        id: crypto.randomUUID(),
+        type: Subjects.UserRegistered,
+        occurredAt: new Date().toISOString(),
+        version: 1,
+        correlationId: correlationId,
+
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      await tx.outboxEvent.create({
+        data: {
+          subject: Subjects.UserRegistered,
+          payload: eventPayload as any,
+        },
+      });
+
+      return user;
+    });
+  }
+
+  // --- FUNCTIONS FOR OUTBOX WORKER TO SCAN DATABASE ---
+  static async getPendingOutboxEvents() {
+    return prisma.outboxEvent.findMany({
+      where: { status: 'PENDING' },
+      take: 20, // Scan 20 events at a time
+      orderBy: { createdAt: 'asc' }
+    });
+  }
+
+  static async markOutboxEventAsPublished(id: string) {
+    return prisma.outboxEvent.update({
+      where: { id },
+      data: { status: 'PUBLISHED', processedAt: new Date() }
+    });
+  }
+
+  static async markOutboxEventAsFailed(id: string, errorMsg: string) {
+    return prisma.outboxEvent.update({
+      where: { id },
+      data: { status: 'FAILED', errorReason: errorMsg }
+    });
   }
 }

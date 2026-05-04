@@ -15,16 +15,17 @@ export class AuthService {
     password: string,
     ipAddress: string,
     userAgent: string,
+    correlationId?: string,
   ) {
     const existingUser = await AuthRepository.findByEmail(email);
     if (existingUser) throw new BadRequestError("Email is already in use");
 
     const hashedPassword = await Password.toHash(password);
 
-    const user = await AuthRepository.createUser({
-      email,
-      password: hashedPassword,
-    });
+    const user = await AuthRepository.createUserWithOutbox({ 
+      email, 
+      password: hashedPassword 
+    }, correlationId);
 
     AuthRepository.createAuditLog({
       userId: user.id,
@@ -34,14 +35,14 @@ export class AuthService {
       userAgent,
     });
 
-    await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      version: 1,
-      timestamp: new Date().toISOString(),
-    });
+    // await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish({
+    //   id: crypto.randomUUID(),
+    //   userId: user.id,
+    //   email: user.email,
+    //   role: user.role,
+    //   version: 1,
+    //   timestamp: new Date().toISOString(),
+    // });
 
     return this.generateAuthTokens(user);
   }

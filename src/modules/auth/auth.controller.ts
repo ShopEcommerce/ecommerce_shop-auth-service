@@ -15,8 +15,9 @@ export class AuthController {
 
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
+    const correlationId = req.correlationId;
 
-    const { user, accessToken, refreshToken } = await AuthService.signup(email, password, ipAddress, userAgent);
+    const { user, accessToken, refreshToken } = await AuthService.signup(email, password, ipAddress, userAgent, correlationId);
 
     req.session = { jwt: accessToken, refreshToken };
 

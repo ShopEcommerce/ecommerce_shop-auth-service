@@ -13,6 +13,12 @@ enum Role {
   ADMIN
 }
 
+enum EventStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -57,4 +63,18 @@ model AuditLog {
   user         User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid())
+  subject       String
+  payload       Json
+  
+  status        EventStatus @default(PENDING)
+  
+  createdAt     DateTime  @default(now())
+  processedAt   DateTime?
+  errorReason   String?
+
+  @@map("outbox_events")
 }
