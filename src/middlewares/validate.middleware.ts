@@ -17,7 +17,7 @@ export const validateZod = (schema: ZodObject<any>) => {
           message: issue.message,
           field: issue.path[issue.path.length - 1].toString(),
         }));
-        next(new RequestValidationError(formattedErrors as any));
+        next(new RequestValidationError(formattedErrors));
       } else {
         next(error);
       }

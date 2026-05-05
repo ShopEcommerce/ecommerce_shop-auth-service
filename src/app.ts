@@ -19,10 +19,16 @@ app.use(express.json());
 
 app.use(correlationId as unknown as RequestHandler);
 
+app.get('/health', (_req, res) => {
+  res.status(200).send({ status: 'ok', service: 'auth-service' });
+});
+
 app.use(
   cookieSession({
     signed: false,
     secure: process.env.NODE_ENV === 'production', 
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   })
 );
 

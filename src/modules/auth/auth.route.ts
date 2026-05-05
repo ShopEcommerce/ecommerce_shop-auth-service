@@ -29,11 +29,6 @@ router.post(
 );
 
 router.post(
-  '/signout',
-  asyncHandler(AuthController.signout)
-);
-
-router.post(
   '/refresh-token',
   asyncHandler(AuthController.refreshToken)
 );
@@ -63,6 +58,13 @@ router.get(
   '/currentuser',
   currentUserMw,
   asyncHandler(AuthController.getCurrentUser)
+);
+
+router.post(
+  '/signout',
+  currentUserMw,
+  requireAuthMw,
+  asyncHandler(AuthController.signout)
 );
 
 export { router as authRouter };
