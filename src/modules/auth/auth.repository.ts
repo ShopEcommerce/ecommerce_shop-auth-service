@@ -1,7 +1,10 @@
-import { prisma } from "../../db/prisma";
-import { Prisma } from "@prisma/client";
+import { prisma } from '../../db/prisma';
+import { Prisma } from '@prisma/client';
 import { Subjects } from '@teleshop/common';
-import crypto from "crypto";
+import crypto from 'crypto';
+import pino from 'pino';
+
+const logger = pino();
 
 export class AuthRepository {
   static async findByEmail(email: string) {
@@ -26,14 +29,10 @@ export class AuthRepository {
   }) {
     prisma.auditLog
       .create({ data })
-      .catch((err) => console.error("Lỗi AuditLog:", err));
+      .catch((err) => logger.error({ err, data }, 'Failed to create AuditLog'));
   }
 
-  static async saveRefreshToken(
-    userId: string,
-    token: string,
-    expiresAt: Date,
-  ) {
+  static async saveRefreshToken(userId: string, token: string, expiresAt: Date) {
     return prisma.refreshToken.create({
       data: { userId, token, expiresAt },
     });
@@ -56,7 +55,6 @@ export class AuthRepository {
 
   static async createUserWithOutbox(data: Prisma.UserCreateInput, correlationId?: string) {
     return prisma.$transaction(async (tx) => {
-
       const user = await tx.user.create({ data });
 
       const eventPayload = {
@@ -85,14 +83,14 @@ export class AuthRepository {
   static async createPasswordResetToken(userId: string, token: string, expiresAt: Date) {
     await prisma.passwordResetToken.deleteMany({ where: { userId } });
     return prisma.passwordResetToken.create({
-      data: { userId, token, expiresAt }
+      data: { userId, token, expiresAt },
     });
   }
 
   static async findPasswordResetToken(token: string) {
     return prisma.passwordResetToken.findUnique({
       where: { token },
-      include: { user: true }
+      include: { user: true },
     });
   }
 
@@ -114,7 +112,7 @@ export class AuthRepository {
       data: {
         subject: Subjects.UserPasswordResetRequested,
         payload: eventPayload as any,
-      }
+      },
     });
   }
 
@@ -123,21 +121,21 @@ export class AuthRepository {
     return prisma.outboxEvent.findMany({
       where: { status: 'PENDING' },
       take: 20, // Scan 20 events at a time
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
     });
   }
 
   static async markOutboxEventAsPublished(id: string) {
     return prisma.outboxEvent.update({
       where: { id },
-      data: { status: 'PUBLISHED', processedAt: new Date() }
+      data: { status: 'PUBLISHED', processedAt: new Date() },
     });
   }
 
   static async markOutboxEventAsFailed(id: string, errorMsg: string) {
     return prisma.outboxEvent.update({
       where: { id },
-      data: { status: 'FAILED', errorReason: errorMsg }
+      data: { status: 'FAILED', errorReason: errorMsg },
     });
   }
 }

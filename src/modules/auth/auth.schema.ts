@@ -10,30 +10,23 @@ const passwordSchema = z
   .regex(/[0-9]/, 'Password must contain at least one number')
   .regex(/[\W_]/, 'Password must contain at least one special character');
 
-
 export const signupSchema = z.object({
   body: z.object({
-    email: z
-      .string({ error: 'Email is required' })
-      .email('Invalid email format'),
+    email: z.string({ error: 'Email is required' }).email('Invalid email format'),
     password: passwordSchema,
   }),
 });
 
 export const signinSchema = z.object({
   body: z.object({
-    email: z
-      .string({ error: 'Email is required' })
-      .email('Invalid email format'),
+    email: z.string({ error: 'Email is required' }).email('Invalid email format'),
     password: z.string({ error: 'Password is required' }),
   }),
 });
 
 export const forgotPasswordSchema = z.object({
   body: z.object({
-    email: z
-      .string({ error: 'Email is required' })
-      .email('Invalid email format'),
+    email: z.string({ error: 'Email is required' }).email('Invalid email format'),
   }),
 });
 

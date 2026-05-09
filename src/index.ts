@@ -22,7 +22,7 @@ const start = async () => {
 
     startOutboxWorker();
 
-    // Graceful Shutdown 
+    // Graceful Shutdown
     process.on('SIGINT', () => rabbitmqWrapper.close());
     process.on('SIGTERM', () => rabbitmqWrapper.close());
 
