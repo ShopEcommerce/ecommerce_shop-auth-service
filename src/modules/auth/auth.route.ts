@@ -16,55 +16,35 @@ const currentUserMw = currentUser as unknown as RequestHandler;
 const requireAuthMw = requireAuth as unknown as RequestHandler;
 
 // --- PUBLIC ROUTES ---
-router.post(
-  '/signup',
-  validateZod(signupSchema),
-  asyncHandler(AuthController.signup)
-);
+router.post('/signup', validateZod(signupSchema), asyncHandler(AuthController.signup));
 
-router.post(
-  '/signin',
-  validateZod(signinSchema),
-  asyncHandler(AuthController.signin)
-);
+router.post('/signin', validateZod(signinSchema), asyncHandler(AuthController.signin));
 
-router.post(
-  '/refresh-token',
-  asyncHandler(AuthController.refreshToken)
-);
+router.post('/refresh-token', asyncHandler(AuthController.refreshToken));
 
 router.post(
   '/forgot-password',
   validateZod(forgotPasswordSchema),
-  asyncHandler(AuthController.forgotPassword)
+  asyncHandler(AuthController.forgotPassword),
 );
 
 router.post(
   '/reset-password',
   validateZod(resetPasswordSchema),
-  asyncHandler(AuthController.resetPassword)
+  asyncHandler(AuthController.resetPassword),
 );
 
 // --- PROTECTED ROUTES ---
 router.post(
   '/change-password',
-  currentUserMw, 
-  requireAuthMw, 
-  validateZod(changePasswordSchema), 
-  asyncHandler(AuthController.changePassword) 
-);
-
-router.get(
-  '/currentuser',
-  currentUserMw,
-  asyncHandler(AuthController.getCurrentUser)
-);
-
-router.post(
-  '/signout',
   currentUserMw,
   requireAuthMw,
-  asyncHandler(AuthController.signout)
+  validateZod(changePasswordSchema),
+  asyncHandler(AuthController.changePassword),
 );
+
+router.get('/currentuser', currentUserMw, asyncHandler(AuthController.getCurrentUser));
+
+router.post('/signout', currentUserMw, requireAuthMw, asyncHandler(AuthController.signout));
 
 export { router as authRouter };

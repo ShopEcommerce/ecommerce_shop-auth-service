@@ -7,7 +7,7 @@ const logger = pino();
 
 export const startOutboxWorker = () => {
   logger.info('[Outbox Worker] Started watching for pending events...');
-  
+
   setInterval(async () => {
     try {
       // 1. Scan database to find events with status = PENDING
@@ -18,23 +18,24 @@ export const startOutboxWorker = () => {
       for (const event of events) {
         try {
           if (event.subject === Subjects.UserRegistered) {
-
             const payload = event.payload as any;
             await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish(payload);
           }
-          
+
           // 3. If no error is thrown -> Mark as published
           await AuthRepository.markOutboxEventAsPublished(event.id);
           logger.info(`[Outbox] Event ${event.id} published successfully.`);
-          
         } catch (publishErr: any) {
           // 4. RabbitMQ error (network issues...) -> Mark as FAILED for later review
-          await AuthRepository.markOutboxEventAsFailed(event.id, publishErr.message || 'Unknown error');
+          await AuthRepository.markOutboxEventAsFailed(
+            event.id,
+            publishErr.message || 'Unknown error',
+          );
           logger.error(`[Outbox] Failed to publish event ${event.id}`);
         }
       }
     } catch (err) {
-      logger.error('[Outbox Worker] Error querying database');
+      logger.error({ err }, '[Outbox Worker] Error querying database');
     }
   }, 3000);
 };

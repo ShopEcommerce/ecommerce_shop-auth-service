@@ -1,9 +1,8 @@
-import { AuthRepository } from "./auth.repository";
-import { BadRequestError, rabbitmqWrapper, UnauthorizedError } from "@teleshop/common";
-import { Password } from "../../utils/password";
-import { UserRegisteredPublisher } from "../../events/publishers/user-registered-publisher";
-import jwt from "jsonwebtoken";
-import crypto from "crypto";
+import { AuthRepository } from './auth.repository';
+import { BadRequestError, UnauthorizedError } from '@teleshop/common';
+import { Password } from '../../utils/password';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const MAX_FAILED_ATTEMPTS = parseInt(process.env.MAX_FAILED_ATTEMPTS!, 10);
 const LOCK_TIME_MINUTES = parseInt(process.env.LOCK_TIME_MINUTES!, 10);
@@ -18,19 +17,22 @@ export class AuthService {
     correlationId?: string,
   ) {
     const existingUser = await AuthRepository.findByEmail(email);
-    if (existingUser) throw new BadRequestError("Email is already in use");
+    if (existingUser) throw new BadRequestError('Email is already in use');
 
     const hashedPassword = await Password.toHash(password);
 
-    const user = await AuthRepository.createUserWithOutbox({ 
-      email, 
-      password: hashedPassword 
-    }, correlationId);
+    const user = await AuthRepository.createUserWithOutbox(
+      {
+        email,
+        password: hashedPassword,
+      },
+      correlationId,
+    );
 
     AuthRepository.createAuditLog({
       userId: user.id,
       emailAttempt: email,
-      action: "SIGNUP_SUCCESS",
+      action: 'SIGNUP_SUCCESS',
       ipAddress,
       userAgent,
     });
@@ -47,34 +49,27 @@ export class AuthService {
     return this.generateAuthTokens(user);
   }
 
-  static async signin(
-    email: string,
-    password: string,
-    ipAddress: string,
-    userAgent: string,
-  ) {
+  static async signin(email: string, password: string, ipAddress: string, userAgent: string) {
     const user = await AuthRepository.findByEmail(email);
     if (!user) {
       AuthRepository.createAuditLog({
         emailAttempt: email,
-        action: "SIGNIN_FAILED_NO_USER",
+        action: 'SIGNIN_FAILED_NO_USER',
         ipAddress,
         userAgent,
       });
-      throw new BadRequestError("Invalid credentials");
+      throw new BadRequestError('Invalid credentials');
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       AuthRepository.createAuditLog({
         userId: user.id,
         emailAttempt: email,
-        action: "SIGNIN_BLOCKED",
+        action: 'SIGNIN_BLOCKED',
         ipAddress,
         userAgent,
       });
-      throw new BadRequestError(
-        `Account locked until ${user.lockedUntil.toLocaleTimeString()}`,
-      );
+      throw new BadRequestError(`Account locked until ${user.lockedUntil.toLocaleTimeString()}`);
     }
 
     const passwordsMatch = await Password.compare(user.password, password);
@@ -94,12 +89,12 @@ export class AuthService {
       AuthRepository.createAuditLog({
         userId: user.id,
         emailAttempt: email,
-        action: "SIGNIN_FAILED_WRONG_PASS",
+        action: 'SIGNIN_FAILED_WRONG_PASS',
         ipAddress,
         userAgent,
       });
 
-      throw new BadRequestError("Invalid credentials");
+      throw new BadRequestError('Invalid credentials');
     }
 
     if (user.failedLoginAttempts > 0) {
@@ -112,7 +107,7 @@ export class AuthService {
     AuthRepository.createAuditLog({
       userId: user.id,
       emailAttempt: email,
-      action: "SIGNIN_SUCCESS",
+      action: 'SIGNIN_SUCCESS',
       ipAddress,
       userAgent,
     });
@@ -128,11 +123,7 @@ export class AuthService {
     }
   }
 
-  static async refreshAuthToken(
-    oldRefreshToken: string,
-    ipAddress: string,
-    userAgent: string,
-  ) {
+  static async refreshAuthToken(oldRefreshToken: string, ipAddress: string, userAgent: string) {
     const savedToken = await AuthRepository.findRefreshToken(oldRefreshToken);
 
     if (!savedToken || savedToken.expiresAt < new Date()) {
@@ -144,7 +135,7 @@ export class AuthService {
     AuthRepository.createAuditLog({
       userId: savedToken.userId,
       emailAttempt: savedToken.user.email,
-      action: "TOKEN_REFRESHED",
+      action: 'TOKEN_REFRESHED',
       ipAddress,
       userAgent,
     });
@@ -154,10 +145,13 @@ export class AuthService {
 
   static async forgotPassword(email: string) {
     const user = await AuthRepository.findByEmail(email);
-    
+
     if (!user) {
-      AuthRepository.createAuditLog({ emailAttempt: email, action: "FORGOT_PASSWORD_REQUESTED_NOT_FOUND" });
-      return; 
+      AuthRepository.createAuditLog({
+        emailAttempt: email,
+        action: 'FORGOT_PASSWORD_REQUESTED_NOT_FOUND',
+      });
+      return;
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -171,7 +165,7 @@ export class AuthService {
     AuthRepository.createAuditLog({
       userId: user.id,
       emailAttempt: email,
-      action: "FORGOT_PASSWORD_TOKEN_GENERATED",
+      action: 'FORGOT_PASSWORD_TOKEN_GENERATED',
     });
   }
 
@@ -187,24 +181,20 @@ export class AuthService {
     await AuthRepository.updateUser(resetRecord.userId, { password: newHashedPassword });
 
     await AuthRepository.deletePasswordResetToken(resetRecord.id);
-    
+
     AuthRepository.createAuditLog({
       userId: resetRecord.userId,
       emailAttempt: resetRecord.user.email,
-      action: "PASSWORD_RESET_SUCCESS",
+      action: 'PASSWORD_RESET_SUCCESS',
     });
   }
 
-  static async changePassword(
-    userId: string,
-    oldPassword: string,
-    newPassword: string,
-  ) {
+  static async changePassword(userId: string, oldPassword: string, newPassword: string) {
     const user = await AuthRepository.findById(userId);
-    if (!user) throw new BadRequestError("User not found");
+    if (!user) throw new BadRequestError('User not found');
 
     const passwordsMatch = await Password.compare(user.password, oldPassword);
-    if (!passwordsMatch) throw new BadRequestError("Invalid old password");
+    if (!passwordsMatch) throw new BadRequestError('Invalid old password');
 
     const hashedPassword = await Password.toHash(newPassword);
     await AuthRepository.updateUser(userId, { password: hashedPassword });
@@ -212,7 +202,7 @@ export class AuthService {
     AuthRepository.createAuditLog({
       userId: user.id,
       emailAttempt: user.email,
-      action: "PASSWORD_CHANGED",
+      action: 'PASSWORD_CHANGED',
     });
   }
 
@@ -220,7 +210,7 @@ export class AuthService {
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET!,
-      { expiresIn: '15m' } 
+      { expiresIn: '15m' },
     );
 
     const refreshToken = crypto.randomBytes(40).toString('hex');
