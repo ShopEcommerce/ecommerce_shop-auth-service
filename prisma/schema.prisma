@@ -33,8 +33,22 @@ model User {
 
   logs                AuditLog[]
   refreshTokens       RefreshToken[]
+  passwordResetToken  PasswordResetToken?
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique
+  expiresAt DateTime
+  
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model RefreshToken {
