@@ -39,6 +39,7 @@ jobs:
       - name: Install Auth Dependencies
         run: |
           cd auth-service
+          npm install ../shared/teleshop-common-1.0.0.tgz 
           npm install
 
       - name: Generate Prisma Client
