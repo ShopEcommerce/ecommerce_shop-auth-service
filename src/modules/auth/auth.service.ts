@@ -153,15 +153,46 @@ export class AuthService {
   }
 
   static async forgotPassword(email: string) {
-    // TODO: Generate Reset Token -> Save to DB -> Send SendEmailEvent to RabbitMQ for Notification Service
+    const user = await AuthRepository.findByEmail(email);
+    
+    if (!user) {
+      AuthRepository.createAuditLog({ emailAttempt: email, action: "FORGOT_PASSWORD_REQUESTED_NOT_FOUND" });
+      return; 
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await AuthRepository.createPasswordResetToken(user.id, hashedToken, expiresAt);
+
+    await AuthRepository.createPasswordResetOutboxEvent(user.id, user.email, resetToken);
+
     AuthRepository.createAuditLog({
+      userId: user.id,
       emailAttempt: email,
-      action: "FORGOT_PASSWORD_REQUESTED",
+      action: "FORGOT_PASSWORD_TOKEN_GENERATED",
     });
   }
 
   static async resetPassword(token: string, newPassword: string) {
-    // TODO: Validate Token -> Hash newPassword -> Update User DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const resetRecord = await AuthRepository.findPasswordResetToken(hashedToken);
+
+    if (!resetRecord || resetRecord.expiresAt < new Date()) {
+      throw new BadRequestError('Mã xác nhận không hợp lệ hoặc đã hết hạn');
+    }
+
+    const newHashedPassword = await Password.toHash(newPassword);
+    await AuthRepository.updateUser(resetRecord.userId, { password: newHashedPassword });
+
+    await AuthRepository.deletePasswordResetToken(resetRecord.id);
+    
+    AuthRepository.createAuditLog({
+      userId: resetRecord.userId,
+      emailAttempt: resetRecord.user.email,
+      action: "PASSWORD_RESET_SUCCESS",
+    });
   }
 
   static async changePassword(

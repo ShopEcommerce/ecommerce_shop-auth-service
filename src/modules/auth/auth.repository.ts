@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma";
 import { Prisma } from "@prisma/client";
 import { Subjects } from '@teleshop/common';
+import crypto from "crypto";
 
 export class AuthRepository {
   static async findByEmail(email: string) {
@@ -78,6 +79,42 @@ export class AuthRepository {
       });
 
       return user;
+    });
+  }
+
+  static async createPasswordResetToken(userId: string, token: string, expiresAt: Date) {
+    await prisma.passwordResetToken.deleteMany({ where: { userId } });
+    return prisma.passwordResetToken.create({
+      data: { userId, token, expiresAt }
+    });
+  }
+
+  static async findPasswordResetToken(token: string) {
+    return prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true }
+    });
+  }
+
+  static async deletePasswordResetToken(id: string) {
+    return prisma.passwordResetToken.delete({ where: { id } });
+  }
+
+  static async createPasswordResetOutboxEvent(userId: string, email: string, rawToken: string) {
+    const eventPayload = {
+      eventId: crypto.randomUUID(),
+      type: Subjects.UserPasswordResetRequested,
+      occurredAt: new Date().toISOString(),
+      userId,
+      email,
+      resetToken: rawToken,
+    };
+
+    return prisma.outboxEvent.create({
+      data: {
+        subject: Subjects.UserPasswordResetRequested,
+        payload: eventPayload as any,
+      }
     });
   }
 
