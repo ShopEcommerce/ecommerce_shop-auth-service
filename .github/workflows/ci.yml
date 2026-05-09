@@ -27,6 +27,7 @@ jobs:
         with:
           node-version: '18.x'
           cache: 'npm'
+          cache-dependency-path: 'auth-service/package-lock.json'
 
       - name: Build Shared Library
         run: |
