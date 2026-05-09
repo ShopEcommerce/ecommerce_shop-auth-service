@@ -10,7 +10,7 @@ describe('Auth API Endpoints', () => {
     it('returns 201 and tokens when signup is successful', async () => {
       // 1. Mock DB: Email not found
       (AuthRepository.findByEmail as jest.Mock).mockResolvedValue(null);
-      
+
       // 2. Mock DB: Return mock user after creation
       (AuthRepository.createUserWithOutbox as jest.Mock).mockResolvedValue({
         id: 'user-123',

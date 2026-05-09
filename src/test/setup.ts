@@ -1,5 +1,3 @@
-import { rabbitmqWrapper } from '@teleshop/common';
-
 process.env.JWT_SECRET = 'test-secret-key-for-jest';
 process.env.MAX_FAILED_ATTEMPTS = '5';
 process.env.LOCK_TIME_MINUTES = '15';
