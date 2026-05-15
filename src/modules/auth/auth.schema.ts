@@ -44,9 +44,37 @@ export const changePasswordSchema = z.object({
   }),
 });
 
+// Admin APIs
+export const updateUserSchema = z.object({
+  body: z.object({
+    role: z.enum(['CUSTOMER', 'SELLER', 'ADMIN']).optional(),
+    status: z.enum(['ACTIVE', 'BANNED', 'SUSPENDED']).optional(),
+  }),
+});
+
+export const banUserSchema = z.object({
+  body: z.object({
+    reason: z
+      .string({ error: 'Ban reason is required' })
+      .min(5, 'Reason must be at least 5 characters'),
+  }),
+});
+
+export const listUsersSchema = z.object({
+  query: z.object({
+    page: z.string().regex(/^\d+$/).optional().default('1'),
+    limit: z.string().regex(/^\d+$/).optional().default('20'),
+    role: z.enum(['CUSTOMER', 'SELLER', 'ADMIN']).optional(),
+    status: z.enum(['ACTIVE', 'BANNED', 'SUSPENDED']).optional(),
+  }),
+});
+
 // --- TYPES EXPORT ---
 export type SignupInput = z.infer<typeof signupSchema>['body'];
 export type SigninInput = z.infer<typeof signinSchema>['body'];
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
+export type UpdateUserInput = z.infer<typeof updateUserSchema>['body'];
+export type BanUserInput = z.infer<typeof banUserSchema>['body'];
+export type ListUsersInput = z.infer<typeof listUsersSchema>['query'];

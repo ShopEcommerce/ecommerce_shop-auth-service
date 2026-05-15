@@ -138,4 +138,89 @@ export class AuthRepository {
       data: { status: 'FAILED', errorReason: errorMsg },
     });
   }
+
+  // =====================
+  // ADMIN FUNCTIONS
+  // =====================
+
+  static async listUsers(
+    page: number,
+    limit: number,
+    filters?: { role?: string; status?: string },
+  ) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (filters?.role) where.role = filters.role;
+    if (filters?.status) where.status = filters.status;
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          bannedAt: true,
+          banReason: true,
+          failedLoginAttempts: true,
+          lockedUntil: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      users,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  static async deletePasswordResetTokenByUserId(userId: string) {
+    return prisma.passwordResetToken.deleteMany({ where: { userId } });
+  }
+
+  static async getAuditLogs(
+    page: number,
+    limit: number,
+    filters?: { userId?: string; action?: string },
+  ) {
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (filters?.userId) where.userId = filters.userId;
+    if (filters?.action) where.action = { contains: filters.action, mode: 'insensitive' };
+
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: { id: true, email: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    return {
+      logs,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }
