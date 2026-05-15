@@ -85,7 +85,9 @@ export class AuthController {
 
   static async forgotPassword(req: Request<unknown, unknown, ForgotPasswordInput>, res: Response) {
     const { email } = req.body;
-    await AuthService.forgotPassword(email);
+    const correlationId = req.correlationId;
+
+    await AuthService.forgotPassword(email, correlationId);
 
     res.status(200).send({ message: 'If the email exists, a reset link will be sent' });
   }

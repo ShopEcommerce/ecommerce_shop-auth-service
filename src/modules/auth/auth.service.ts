@@ -157,7 +157,7 @@ export class AuthService {
     return this.generateAuthTokens(savedToken.user);
   }
 
-  static async forgotPassword(email: string) {
+  static async forgotPassword(email: string, correlationId?: string) {
     const user = await AuthRepository.findByEmail(email);
 
     if (!user) {
@@ -174,7 +174,7 @@ export class AuthService {
 
     await AuthRepository.createPasswordResetToken(user.id, hashedToken, expiresAt);
 
-    await AuthRepository.createPasswordResetOutboxEvent(user.id, user.email, resetToken);
+    await AuthRepository.createPasswordResetOutboxEvent(user.id, user.email, resetToken, correlationId);
 
     AuthRepository.createAuditLog({
       userId: user.id,

@@ -59,7 +59,7 @@ export class AuthRepository {
 
       const eventPayload = {
         id: crypto.randomUUID(),
-        type: Subjects.UserRegistered,
+        type: 'UserRegistered',
         occurredAt: new Date().toISOString(),
         version: 1,
         correlationId: correlationId,
@@ -98,11 +98,13 @@ export class AuthRepository {
     return prisma.passwordResetToken.delete({ where: { id } });
   }
 
-  static async createPasswordResetOutboxEvent(userId: string, email: string, rawToken: string) {
+  static async createPasswordResetOutboxEvent(userId: string, email: string, rawToken: string, correlationId?: string) {
     const eventPayload = {
-      eventId: crypto.randomUUID(),
-      type: Subjects.UserPasswordResetRequested,
+      id: crypto.randomUUID(),
+      type: 'UserPasswordResetRequested',
       occurredAt: new Date().toISOString(),
+      version: 1,
+      correlationId,
       userId,
       email,
       resetToken: rawToken,
