@@ -1,11 +1,15 @@
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { AuthMessages } from '../../helpers/messages';
 import {
   SignupInput,
   SigninInput,
   ForgotPasswordInput,
   ResetPasswordInput,
   ChangePasswordInput,
+  UpdateUserInput,
+  BanUserInput,
+  ListUsersInput,
 } from './auth.schema';
 
 export class AuthController {
@@ -26,7 +30,7 @@ export class AuthController {
 
     req.session = { jwt: accessToken, refreshToken };
 
-    res.status(201).send({ message: 'Signup successful', user });
+    res.status(201).send(AuthMessages.buildSuccessResponse(AuthMessages.MSG_08, user));
   }
 
   static async signin(req: Request<unknown, unknown, SigninInput>, res: Response) {
@@ -43,7 +47,7 @@ export class AuthController {
     );
 
     req.session = { jwt: accessToken, refreshToken };
-    res.status(200).send({ message: 'Signin successful', user });
+    res.status(200).send(AuthMessages.buildSuccessResponse(AuthMessages.MSG_04, user));
   }
 
   static async signout(req: Request<unknown, unknown, unknown>, res: Response) {
@@ -104,5 +108,71 @@ export class AuthController {
 
   static async getCurrentUser(req: Request, res: Response) {
     res.status(200).send({ currentUser: req.currentUser || null });
+  }
+
+  // =====================
+  // ADMIN ENDPOINTS
+  // =====================
+
+  static async listUsers(req: Request<unknown, unknown, unknown, ListUsersInput>, res: Response) {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '20', 10);
+    const filters = {
+      role: req.query.role,
+      status: req.query.status,
+    };
+
+    const result = await AuthService.listUsers(page, limit, filters);
+    res.status(200).send(result);
+  }
+
+  static async getUserById(req: Request<{ id: string }>, res: Response) {
+    const { id } = req.params;
+    const user = await AuthService.getUserById(id);
+    res.status(200).send(user);
+  }
+
+  static async updateUser(req: Request<{ id: string }, unknown, UpdateUserInput>, res: Response) {
+    const { id } = req.params;
+    const adminId = req.currentUser!.id;
+    const updated = await AuthService.updateUser(id, adminId, req.body);
+    res.status(200).send({ message: 'User updated successfully', user: updated });
+  }
+
+  static async banUser(req: Request<{ id: string }, unknown, BanUserInput>, res: Response) {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = req.currentUser!.id;
+
+    const updated = await AuthService.banUser(id, reason, adminId);
+    res.status(200).send({ message: 'User banned successfully', user: updated });
+  }
+
+  static async unbanUser(req: Request<{ id: string }>, res: Response) {
+    const { id } = req.params;
+    const adminId = req.currentUser!.id;
+
+    const updated = await AuthService.unbanUser(id, adminId);
+    res.status(200).send({ message: 'User unbanned successfully', user: updated });
+  }
+
+  static async deleteUser(req: Request<{ id: string }>, res: Response) {
+    const { id } = req.params;
+    const adminId = req.currentUser!.id;
+
+    await AuthService.deleteUser(id, adminId);
+    res.status(200).send({ message: 'User deleted successfully' });
+  }
+
+  static async getAuditLogs(req: Request<unknown, unknown, unknown, any>, res: Response) {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '20', 10);
+    const filters = {
+      userId: req.query.userId,
+      action: req.query.action,
+    };
+
+    const result = await AuthService.getAuditLogs(page, limit, filters);
+    res.status(200).send(result);
   }
 }

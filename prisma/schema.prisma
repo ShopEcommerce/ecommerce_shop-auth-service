@@ -13,6 +13,12 @@ enum Role {
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  BANNED
+  SUSPENDED
+}
+
 enum EventStatus {
   PENDING
   PUBLISHED
@@ -24,9 +30,14 @@ model User {
   email     String   @unique
   password  String
   role      Role     @default(CUSTOMER)
+  status    UserStatus @default(ACTIVE)
 
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
+  
+  bannedAt   DateTime?
+  banReason  String?
+  bannedBy   String?   // Admin ID who banned this user
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

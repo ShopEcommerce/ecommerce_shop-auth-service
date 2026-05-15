@@ -5,10 +5,16 @@ import pino from 'pino';
 
 const logger = pino();
 
+let isProcessing = false;
+
 export const startOutboxWorker = () => {
   logger.info('[Outbox Worker] Started watching for pending events...');
 
   setInterval(async () => {
+    if (isProcessing) return;
+
+    isProcessing = true;
+
     try {
       // 1. Scan database to find events with status = PENDING
       const events = await AuthRepository.getPendingOutboxEvents();
@@ -36,6 +42,8 @@ export const startOutboxWorker = () => {
       }
     } catch (err) {
       logger.error({ err }, '[Outbox Worker] Error querying database');
+    } finally {
+      isProcessing = false;
     }
   }, 3000);
 };
