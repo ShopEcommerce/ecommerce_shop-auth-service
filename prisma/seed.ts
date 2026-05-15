@@ -1,10 +1,22 @@
 import { PrismaClient } from '@prisma/client';
-import { Password } from '../src/utils/password'; 
+import { Password } from '../src/utils/password';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import * as dotenv from 'dotenv';
+import pino from 'pino';
 
-const prisma = new PrismaClient();
+dotenv.config();
+
+const logger = pino();
+
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('Seeding Auth Service Database...');
+  logger.info('Seeding Auth Service Database...');
 
   await prisma.auditLog.deleteMany({});
   await prisma.refreshToken.deleteMany({});
@@ -38,12 +50,14 @@ async function main() {
     },
   });
 
-  console.log('Seeding complete! 3 sample accounts created (admin, seller, customer) with password: Password123!');
+  logger.info(
+    'Seeding complete! 3 sample accounts created (admin, seller, customer) with password: Password123!',
+  );
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    logger.error(e);
     throw e;
   })
   .finally(async () => {
