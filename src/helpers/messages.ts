@@ -20,6 +20,8 @@ export enum MessageCode {
   MSG_13 = 'MSG_13',
   MSG_14 = 'MSG_14',
   MSG_15 = 'MSG_15',
+  MSG_16 = 'MSG_16',
+  MSG_17 = 'MSG_17',
 }
 
 export interface MessageDefinition {
@@ -55,7 +57,7 @@ export class AuthMessages {
 
   static readonly MSG_09: MessageDefinition = {
     code: MessageCode.MSG_09,
-    message: 'Invalid or expired verification link',
+    message: 'Invalid or expired token',
     httpStatus: 400,
     category: 'validation',
   };
@@ -142,6 +144,20 @@ export class AuthMessages {
     category: 'success',
   };
 
+  static readonly MSG_16: MessageDefinition = {
+    code: MessageCode.MSG_16,
+    message: 'Signup successful. Please verify your email to activate your account',
+    httpStatus: 201,
+    category: 'success',
+  };
+
+  static readonly MSG_17: MessageDefinition = {
+    code: MessageCode.MSG_17,
+    message: 'Please verify your email before signing in',
+    httpStatus: 403,
+    category: 'authorization',
+  };
+
   /**
    * Get message by code
    */
@@ -163,6 +179,8 @@ export class AuthMessages {
       [MessageCode.MSG_13]: this.MSG_13,
       [MessageCode.MSG_14]: this.MSG_14,
       [MessageCode.MSG_15]: this.MSG_15,
+      [MessageCode.MSG_16]: this.MSG_16,
+      [MessageCode.MSG_17]: this.MSG_17,
     };
     return messages[code] || this.MSG_01;
   }

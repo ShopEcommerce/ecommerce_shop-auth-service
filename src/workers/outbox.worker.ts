@@ -1,5 +1,6 @@
 import { AuthRepository } from '../modules/auth/auth.repository';
 import { UserRegisteredPublisher } from '../events/publishers/user-registered-publisher';
+import { UserVerifiedPublisher } from '../events/publishers/user-verified-publisher';
 import { UserPasswordResetRequestedPublisher } from '../events/publishers/password-reset-requested-publisher';
 import { rabbitmqWrapper, Subjects } from '@teleshop/common';
 import pino from 'pino';
@@ -30,8 +31,13 @@ export const startOutboxWorker = () => {
             case Subjects.UserRegistered:
               await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish(payload);
               break;
+            case Subjects.UserVerified:
+              await new UserVerifiedPublisher(rabbitmqWrapper.channel).publish(payload);
+              break;
             case Subjects.UserPasswordResetRequested:
-              await new UserPasswordResetRequestedPublisher(rabbitmqWrapper.channel).publish(payload);
+              await new UserPasswordResetRequestedPublisher(rabbitmqWrapper.channel).publish(
+                payload,
+              );
               break;
             default:
               throw new Error(`Unsupported outbox subject: ${event.subject}`);

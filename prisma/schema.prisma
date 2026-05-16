@@ -14,6 +14,7 @@ enum Role {
 }
 
 enum UserStatus {
+  PENDING
   ACTIVE
   BANNED
   SUSPENDED
@@ -30,7 +31,7 @@ model User {
   email     String   @unique
   password  String
   role      Role     @default(CUSTOMER)
-  status    UserStatus @default(ACTIVE)
+  status    UserStatus @default(PENDING)
 
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
@@ -45,6 +46,7 @@ model User {
   logs                AuditLog[]
   refreshTokens       RefreshToken[]
   passwordResetToken  PasswordResetToken?
+  emailVerificationToken EmailVerificationToken?
 
   @@map("users")
 }
@@ -60,6 +62,19 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
 }
 
 model RefreshToken {
