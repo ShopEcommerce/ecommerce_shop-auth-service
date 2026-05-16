@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { AuthMessages } from '../../helpers/messages';
 import {
   SignupInput,
+  VerifyEmailInput,
   SigninInput,
   ForgotPasswordInput,
   ResetPasswordInput,
@@ -20,17 +21,22 @@ export class AuthController {
     const userAgent = req.headers['user-agent'] || 'unknown';
     const correlationId = req.correlationId;
 
-    const { user, accessToken, refreshToken } = await AuthService.signup(
-      email,
-      password,
-      ipAddress,
-      userAgent,
-      correlationId,
-    );
+    const { user } = await AuthService.signup(email, password, ipAddress, userAgent, correlationId);
 
-    req.session = { jwt: accessToken, refreshToken };
+    req.session = null;
+    res.status(201).send(AuthMessages.buildSuccessResponse(AuthMessages.MSG_16, user));
+  }
 
-    res.status(201).send(AuthMessages.buildSuccessResponse(AuthMessages.MSG_08, user));
+  static async verifyEmail(
+    req: Request<unknown, unknown, unknown, VerifyEmailInput>,
+    res: Response,
+  ) {
+    const { token } = req.query;
+    const correlationId = req.correlationId;
+
+    const user = await AuthService.verifyEmail(token, correlationId);
+
+    res.status(200).send(AuthMessages.buildSuccessResponse(AuthMessages.MSG_13, user));
   }
 
   static async signin(req: Request<unknown, unknown, SigninInput>, res: Response) {
@@ -85,7 +91,9 @@ export class AuthController {
 
   static async forgotPassword(req: Request<unknown, unknown, ForgotPasswordInput>, res: Response) {
     const { email } = req.body;
-    await AuthService.forgotPassword(email);
+    const correlationId = req.correlationId;
+
+    await AuthService.forgotPassword(email, correlationId);
 
     res.status(200).send({ message: 'If the email exists, a reset link will be sent' });
   }

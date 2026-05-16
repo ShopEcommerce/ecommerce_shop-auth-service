@@ -1,5 +1,7 @@
 import { AuthRepository } from '../modules/auth/auth.repository';
 import { UserRegisteredPublisher } from '../events/publishers/user-registered-publisher';
+import { UserVerifiedPublisher } from '../events/publishers/user-verified-publisher';
+import { UserPasswordResetRequestedPublisher } from '../events/publishers/password-reset-requested-publisher';
 import { rabbitmqWrapper, Subjects } from '@teleshop/common';
 import pino from 'pino';
 
@@ -23,9 +25,22 @@ export const startOutboxWorker = () => {
       // 2. Loop through each event and send
       for (const event of events) {
         try {
-          if (event.subject === Subjects.UserRegistered) {
-            const payload = event.payload as any;
-            await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish(payload);
+          const payload = event.payload as any;
+
+          switch (event.subject) {
+            case Subjects.UserRegistered:
+              await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish(payload);
+              break;
+            case Subjects.UserVerified:
+              await new UserVerifiedPublisher(rabbitmqWrapper.channel).publish(payload);
+              break;
+            case Subjects.UserPasswordResetRequested:
+              await new UserPasswordResetRequestedPublisher(rabbitmqWrapper.channel).publish(
+                payload,
+              );
+              break;
+            default:
+              throw new Error(`Unsupported outbox subject: ${event.subject}`);
           }
 
           // 3. If no error is thrown -> Mark as published

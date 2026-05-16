@@ -36,7 +36,9 @@ describe('Auth API Endpoints', () => {
         })
         .expect(201);
 
-      expect(response.body.message).toEqual('Signup successful');
+      expect(response.body.message).toEqual(
+        'Signup successful. Please verify your email to activate your account',
+      );
 
       const user = response.body?.data;
       expect(user).toHaveProperty('id');

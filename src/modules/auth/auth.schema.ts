@@ -17,6 +17,14 @@ export const signupSchema = z.object({
   }),
 });
 
+export const verifyEmailSchema = z.object({
+  query: z.object({
+    token: z
+      .string({ error: 'Verification token is required' })
+      .min(1, 'Verification token is required'),
+  }),
+});
+
 export const signinSchema = z.object({
   body: z.object({
     email: z.string({ error: 'Email is required' }).email('Invalid email format'),
@@ -48,7 +56,7 @@ export const changePasswordSchema = z.object({
 export const updateUserSchema = z.object({
   body: z.object({
     role: z.enum(['CUSTOMER', 'SELLER', 'ADMIN']).optional(),
-    status: z.enum(['ACTIVE', 'BANNED', 'SUSPENDED']).optional(),
+    status: z.enum(['PENDING', 'ACTIVE', 'BANNED', 'SUSPENDED']).optional(),
   }),
 });
 
@@ -65,12 +73,13 @@ export const listUsersSchema = z.object({
     page: z.string().regex(/^\d+$/).optional().default('1'),
     limit: z.string().regex(/^\d+$/).optional().default('20'),
     role: z.enum(['CUSTOMER', 'SELLER', 'ADMIN']).optional(),
-    status: z.enum(['ACTIVE', 'BANNED', 'SUSPENDED']).optional(),
+    status: z.enum(['PENDING', 'ACTIVE', 'BANNED', 'SUSPENDED']).optional(),
   }),
 });
 
 // --- TYPES EXPORT ---
 export type SignupInput = z.infer<typeof signupSchema>['body'];
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>['query'];
 export type SigninInput = z.infer<typeof signinSchema>['body'];
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];

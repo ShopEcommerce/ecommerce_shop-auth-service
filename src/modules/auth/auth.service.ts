@@ -1,5 +1,5 @@
 import { AuthRepository } from './auth.repository';
-import { BadRequestError, UnauthorizedError } from '@teleshop/common';
+import { BadRequestError, ForbiddenError, UnauthorizedError } from '@teleshop/common';
 import { Password } from '../../utils/password';
 import { AuthMessages } from '../../helpers/messages';
 import jwt from 'jsonwebtoken';
@@ -33,21 +33,12 @@ export class AuthService {
     AuthRepository.createAuditLog({
       userId: user.id,
       emailAttempt: email,
-      action: 'SIGNUP_SUCCESS',
+      action: 'SIGNUP_PENDING_VERIFICATION',
       ipAddress,
       userAgent,
     });
 
-    // await new UserRegisteredPublisher(rabbitmqWrapper.channel).publish({
-    //   id: crypto.randomUUID(),
-    //   userId: user.id,
-    //   email: user.email,
-    //   role: user.role,
-    //   version: 1,
-    //   timestamp: new Date().toISOString(),
-    // });
-
-    return this.generateAuthTokens(user);
+    return { user: { id: user.id, email: user.email, role: user.role, status: user.status } };
   }
 
   static async signin(email: string, password: string, ipAddress: string, userAgent: string) {
@@ -62,7 +53,17 @@ export class AuthService {
       throw new BadRequestError(AuthMessages.MSG_02.message);
     }
 
-    // Check if user is banned
+    if (user.status === 'PENDING') {
+      AuthRepository.createAuditLog({
+        userId: user.id,
+        emailAttempt: email,
+        action: 'SIGNIN_FAILED_EMAIL_NOT_VERIFIED',
+        ipAddress,
+        userAgent,
+      });
+      throw new ForbiddenError(AuthMessages.MSG_17.message);
+    }
+
     if (user.status === 'BANNED') {
       AuthRepository.createAuditLog({
         userId: user.id,
@@ -72,6 +73,17 @@ export class AuthService {
         userAgent,
       });
       throw new BadRequestError(AuthMessages.MSG_15.message);
+    }
+
+    if (user.status === 'SUSPENDED') {
+      AuthRepository.createAuditLog({
+        userId: user.id,
+        emailAttempt: email,
+        action: 'SIGNIN_FAILED_USER_SUSPENDED',
+        ipAddress,
+        userAgent,
+      });
+      throw new BadRequestError('Your account is suspended');
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -128,6 +140,22 @@ export class AuthService {
     return this.generateAuthTokens(user);
   }
 
+  static async verifyEmail(token: string, correlationId?: string) {
+    const user = await AuthRepository.verifyEmailToken(token, correlationId);
+
+    if (!user) {
+      throw new BadRequestError(AuthMessages.MSG_09.message);
+    }
+
+    AuthRepository.createAuditLog({
+      userId: user.id,
+      emailAttempt: user.email,
+      action: 'EMAIL_VERIFIED_SUCCESS',
+    });
+
+    return { id: user.id, email: user.email, role: user.role, status: user.status };
+  }
+
   static async signout(userId: string, refreshToken?: string) {
     if (refreshToken) {
       await AuthRepository.deleteRefreshToken(refreshToken);
@@ -157,7 +185,7 @@ export class AuthService {
     return this.generateAuthTokens(savedToken.user);
   }
 
-  static async forgotPassword(email: string) {
+  static async forgotPassword(email: string, correlationId?: string) {
     const user = await AuthRepository.findByEmail(email);
 
     if (!user) {
@@ -174,7 +202,12 @@ export class AuthService {
 
     await AuthRepository.createPasswordResetToken(user.id, hashedToken, expiresAt);
 
-    await AuthRepository.createPasswordResetOutboxEvent(user.id, user.email, resetToken);
+    await AuthRepository.createPasswordResetOutboxEvent(
+      user.id,
+      user.email,
+      resetToken,
+      correlationId,
+    );
 
     AuthRepository.createAuditLog({
       userId: user.id,

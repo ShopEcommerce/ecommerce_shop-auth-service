@@ -55,11 +55,31 @@ export class AuthRepository {
 
   static async createUserWithOutbox(data: Prisma.UserCreateInput, correlationId?: string) {
     return prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({ data });
+      const user = await tx.user.create({
+        data: {
+          ...data,
+          status: 'PENDING',
+        },
+      });
+
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const hashedVerificationToken = crypto
+        .createHash('sha256')
+        .update(verificationToken)
+        .digest('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await tx.emailVerificationToken.create({
+        data: {
+          userId: user.id,
+          token: hashedVerificationToken,
+          expiresAt,
+        },
+      });
 
       const eventPayload = {
         id: crypto.randomUUID(),
-        type: Subjects.UserRegistered,
+        type: 'UserRegistered',
         occurredAt: new Date().toISOString(),
         version: 1,
         correlationId: correlationId,
@@ -67,12 +87,89 @@ export class AuthRepository {
         userId: user.id,
         email: user.email,
         role: user.role,
+        verificationToken,
       };
 
       await tx.outboxEvent.create({
         data: {
           subject: Subjects.UserRegistered,
           payload: eventPayload as any,
+        },
+      });
+
+      return user;
+    });
+  }
+
+  static async findEmailVerificationToken(token: string) {
+    return prisma.emailVerificationToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+  }
+
+  static async deleteEmailVerificationToken(id: string) {
+    return prisma.emailVerificationToken.delete({ where: { id } });
+  }
+
+  static async createUserVerifiedOutboxEvent(
+    userId: string,
+    email: string,
+    role: string,
+    correlationId?: string,
+  ) {
+    const eventPayload = {
+      id: crypto.randomUUID(),
+      type: 'UserVerified',
+      occurredAt: new Date().toISOString(),
+      version: 1,
+      correlationId,
+      userId,
+      email,
+      role,
+    };
+
+    return prisma.outboxEvent.create({
+      data: {
+        subject: Subjects.UserVerified,
+        payload: eventPayload as any,
+      },
+    });
+  }
+
+  static async verifyEmailToken(token: string, correlationId?: string) {
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    return prisma.$transaction(async (tx) => {
+      const verificationRecord = await tx.emailVerificationToken.findUnique({
+        where: { token: hashedToken },
+        include: { user: true },
+      });
+
+      if (!verificationRecord || verificationRecord.expiresAt < new Date()) {
+        return null;
+      }
+
+      const user = await tx.user.update({
+        where: { id: verificationRecord.userId },
+        data: { status: 'ACTIVE' },
+      });
+
+      await tx.emailVerificationToken.delete({ where: { id: verificationRecord.id } });
+
+      await tx.outboxEvent.create({
+        data: {
+          subject: Subjects.UserVerified,
+          payload: {
+            id: crypto.randomUUID(),
+            type: 'UserVerified',
+            occurredAt: new Date().toISOString(),
+            version: 1,
+            correlationId,
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+          } as any,
         },
       });
 
@@ -98,11 +195,18 @@ export class AuthRepository {
     return prisma.passwordResetToken.delete({ where: { id } });
   }
 
-  static async createPasswordResetOutboxEvent(userId: string, email: string, rawToken: string) {
+  static async createPasswordResetOutboxEvent(
+    userId: string,
+    email: string,
+    rawToken: string,
+    correlationId?: string,
+  ) {
     const eventPayload = {
-      eventId: crypto.randomUUID(),
-      type: Subjects.UserPasswordResetRequested,
+      id: crypto.randomUUID(),
+      type: 'UserPasswordResetRequested',
       occurredAt: new Date().toISOString(),
+      version: 1,
+      correlationId,
       userId,
       email,
       resetToken: rawToken,

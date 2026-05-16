@@ -2,6 +2,7 @@ import express, { RequestHandler } from 'express';
 import { validateZod } from '../../middlewares/validate.middleware';
 import {
   signupSchema,
+  verifyEmailSchema,
   signinSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -28,6 +29,12 @@ const restrictToAdmin = (req: any, res: any, next: any) => {
 
 // --- PUBLIC ROUTES ---
 router.post('/signup', validateZod(signupSchema), asyncHandler(AuthController.signup));
+
+router.get(
+  '/verify-email',
+  validateZod(verifyEmailSchema),
+  asyncHandler(AuthController.verifyEmail as any),
+);
 
 router.post('/signin', validateZod(signinSchema), asyncHandler(AuthController.signin));
 
