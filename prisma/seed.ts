@@ -21,6 +21,7 @@ async function main() {
   await prisma.auditLog.deleteMany({});
   await prisma.refreshToken.deleteMany({});
   await prisma.passwordResetToken.deleteMany({});
+  await prisma.emailVerificationToken.deleteMany({});
   await prisma.outboxEvent.deleteMany({});
   await prisma.user.deleteMany({});
 
@@ -28,25 +29,31 @@ async function main() {
 
   await prisma.user.create({
     data: {
+      id: '00000000-0000-0000-0000-000000000001',
       email: 'admin@teleshop.com',
       password: defaultPassword,
       role: 'ADMIN',
+      status: 'ACTIVE',
     },
   });
 
   await prisma.user.create({
     data: {
+      id: '00000000-0000-0000-0000-000000000002',
       email: 'seller@teleshop.com',
       password: defaultPassword,
       role: 'SELLER',
+      status: 'ACTIVE',
     },
   });
 
   await prisma.user.create({
     data: {
+      id: '00000000-0000-0000-0000-000000000003',
       email: 'customer@teleshop.com',
       password: defaultPassword,
       role: 'CUSTOMER',
+      status: 'ACTIVE',
     },
   });
 

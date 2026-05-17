@@ -77,6 +77,15 @@ export const listUsersSchema = z.object({
   }),
 });
 
+export const createUserSchema = z.object({
+  body: z.object({
+    email: z.string({ error: 'Email is required' }).email('Invalid email format'),
+    password: passwordSchema,
+    role: z.enum(['CUSTOMER', 'SELLER', 'ADMIN']).optional().default('CUSTOMER'),
+    status: z.enum(['PENDING', 'ACTIVE', 'BANNED', 'SUSPENDED']).optional().default('ACTIVE'),
+  }),
+});
+
 // --- TYPES EXPORT ---
 export type SignupInput = z.infer<typeof signupSchema>['body'];
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>['query'];
@@ -87,3 +96,4 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
 export type UpdateUserInput = z.infer<typeof updateUserSchema>['body'];
 export type BanUserInput = z.infer<typeof banUserSchema>['body'];
 export type ListUsersInput = z.infer<typeof listUsersSchema>['query'];
+export type CreateUserInput = z.infer<typeof createUserSchema>['body'];

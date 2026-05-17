@@ -10,6 +10,7 @@ import {
   updateUserSchema,
   banUserSchema,
   listUsersSchema,
+  createUserSchema,
 } from './auth.schema';
 import { AuthController } from './auth.controller';
 import { asyncHandler, currentUser, requireAuth } from '@teleshop/common';
@@ -73,6 +74,15 @@ router.get(
   restrictToAdmin,
   validateZod(listUsersSchema),
   asyncHandler(AuthController.listUsers as any),
+);
+
+router.post(
+  '/admin/users',
+  currentUserMw,
+  requireAuthMw,
+  restrictToAdmin,
+  validateZod(createUserSchema),
+  asyncHandler(AuthController.createUser as any),
 );
 
 router.get(
