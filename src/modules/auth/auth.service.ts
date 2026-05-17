@@ -276,6 +276,39 @@ export class AuthService {
   // ADMIN FUNCTIONS
   // =====================
 
+  static async createUserByAdmin(
+    email: string,
+    password: string,
+    role: string,
+    status: string,
+    adminId: string,
+  ) {
+    const existingUser = await AuthRepository.findByEmail(email);
+    if (existingUser) throw new BadRequestError(AuthMessages.MSG_14.message);
+
+    const hashedPassword = await Password.toHash(password);
+    const user = await AuthRepository.createUser({
+      email,
+      password: hashedPassword,
+      role: role as any,
+      status: status as any,
+    });
+
+    AuthRepository.createAuditLog({
+      userId: adminId,
+      emailAttempt: email,
+      action: 'USER_CREATED_BY_ADMIN',
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      createdAt: user.createdAt,
+    };
+  }
+
   static async listUsers(
     page: number,
     limit: number,

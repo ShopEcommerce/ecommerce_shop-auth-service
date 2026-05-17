@@ -11,6 +11,7 @@ import {
   UpdateUserInput,
   BanUserInput,
   ListUsersInput,
+  CreateUserInput,
 } from './auth.schema';
 
 export class AuthController {
@@ -121,6 +122,14 @@ export class AuthController {
   // =====================
   // ADMIN ENDPOINTS
   // =====================
+
+  static async createUser(req: Request<unknown, unknown, CreateUserInput>, res: Response) {
+    const { email, password, role, status } = req.body;
+    const adminId = req.currentUser!.id;
+
+    const user = await AuthService.createUserByAdmin(email, password, role, status, adminId);
+    res.status(201).send({ message: 'User created successfully', user });
+  }
 
   static async listUsers(req: Request<unknown, unknown, unknown, ListUsersInput>, res: Response) {
     const page = parseInt(req.query.page || '1', 10);
