@@ -1,6 +1,12 @@
 import { prisma } from '../../db/prisma';
 import { Prisma } from '@prisma/client';
-import { Subjects } from '@teleshop/common';
+import {
+  Subjects,
+  UserPasswordResetRequestedEvent,
+  UserRegisteredEvent,
+  UserRole,
+  UserVerifiedEvent,
+} from '@teleshop/common';
 import crypto from 'crypto';
 import pino from 'pino';
 
@@ -77,13 +83,12 @@ export class AuthRepository {
         },
       });
 
-      const eventPayload = {
+      const eventPayload: UserRegisteredEvent['data'] = {
         id: crypto.randomUUID(),
-        type: 'UserRegistered',
+        type: Subjects.UserRegistered,
         occurredAt: new Date().toISOString(),
         version: 1,
-        correlationId: correlationId,
-
+        correlationId,
         userId: user.id,
         email: user.email,
         role: user.role,
@@ -115,12 +120,12 @@ export class AuthRepository {
   static async createUserVerifiedOutboxEvent(
     userId: string,
     email: string,
-    role: string,
+    role: UserRole,
     correlationId?: string,
   ) {
-    const eventPayload = {
+    const eventPayload: UserVerifiedEvent['data'] = {
       id: crypto.randomUUID(),
-      type: 'UserVerified',
+      type: Subjects.UserVerified,
       occurredAt: new Date().toISOString(),
       version: 1,
       correlationId,
@@ -157,19 +162,21 @@ export class AuthRepository {
 
       await tx.emailVerificationToken.delete({ where: { id: verificationRecord.id } });
 
+      const eventPayload: UserVerifiedEvent['data'] = {
+        id: crypto.randomUUID(),
+        type: Subjects.UserVerified,
+        occurredAt: new Date().toISOString(),
+        version: 1,
+        correlationId,
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
       await tx.outboxEvent.create({
         data: {
           subject: Subjects.UserVerified,
-          payload: {
-            id: crypto.randomUUID(),
-            type: 'UserVerified',
-            occurredAt: new Date().toISOString(),
-            version: 1,
-            correlationId,
-            userId: user.id,
-            email: user.email,
-            role: user.role,
-          } as any,
+          payload: eventPayload as any,
         },
       });
 
@@ -201,9 +208,9 @@ export class AuthRepository {
     rawToken: string,
     correlationId?: string,
   ) {
-    const eventPayload = {
+    const eventPayload: UserPasswordResetRequestedEvent['data'] = {
       id: crypto.randomUUID(),
-      type: 'UserPasswordResetRequested',
+      type: Subjects.UserPasswordResetRequested,
       occurredAt: new Date().toISOString(),
       version: 1,
       correlationId,
