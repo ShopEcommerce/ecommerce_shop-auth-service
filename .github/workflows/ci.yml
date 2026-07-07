@@ -11,48 +11,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout auth-service
-        uses: actions/checkout@v3
-        with:
-          path: auth-service
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Checkout shared repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ShopEcommerce/ecommerce_shop-shared
           path: shared
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22.x'
           cache: 'npm'
-          cache-dependency-path: 'auth-service/package-lock.json'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Build Shared Library
         run: |
           cd shared
-          npm install
+          npm install --cache .npm-cache
           npm run build
-          npm pack
+          npm pack --cache .npm-cache
 
       - name: Install Auth Dependencies
         run: |
-          cd auth-service
-          npm install ../shared/teleshop-common-1.0.0.tgz 
-          npm install
+          npm install ./shared/teleshop-common-1.0.4.tgz --cache .npm-cache
+          npm install --cache .npm-cache
 
       - name: Generate Prisma Client
         run: |
-          cd auth-service
           npx prisma generate
 
       - name: Run Linter
         run: |
-          cd auth-service
           npm run lint
 
       - name: Run Unit Tests
         run: |
-          cd auth-service
           npm run test:ci
